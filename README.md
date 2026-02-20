@@ -8,7 +8,9 @@ EventBridge ensures the process runs automatically whenever new ASGs are created
 
 # Prerequisites (important)
 •	All EC2’s instances must have an instance profile attached that allows access to SSM
+
 •	ASG’s must use a Launch Template (not legacy Launch Configurations).
+
 •	Currently doesn't work for Windows 2025  (the AWS provided SSM-UpdateWindowsAMI runbook only works up to Windows 2022)
 
 # High Level Solution Overview
