@@ -4,7 +4,7 @@ This solution provides a fully automated, high availability workflow that keeps 
 
 EventBridge ensures the process runs automatically whenever new ASGs are created or on a user defined schedule, delivering a hands off, resilient, and compliant patching model aligned to AWS best practices.
 
-https://github.com/liamgcurran/automated-ami-patching/blob/main/Automated-AMI-Lifecycle-Patch-Management-For-ASGs-2.jpg
+<img src="https://github.com/liamgcurran/automated-ami-patching/blob/main/Automated-AMI-Lifecycle-Patch-Management-For-ASGs-2.jpg">
 
 # Prerequisites (important)
 •	All EC2’s instances must have an instance profile attached that allows access to SSM
