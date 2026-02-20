@@ -34,3 +34,21 @@ EventBridge ensures the process runs automatically whenever new ASGs are created
 
 •	ASG replaces instances safely and gradually, ensuring at least the defined number of healthy nodes remain available throughout the refresh process.
 
+# Deployment
+
+The solution is currently split into two parts.  
+
+<b>1st</b>, run the 'custom_update_ami' code to deploy the custom SSM automation runbooks, one for Windows and one for Linux plus the SSMAutomation IAM role.
+
+In the terraform.tfvars file you must provide the arn of the ec2 instance profile role i.e. instance_profile_role_arn = "arn:aws:iam::111111111111:role/ec2_instance_role"
+
+<b>2nd</b>, run the 'lambda_ssmautomation' code to deploy the lambda function and associated IAM roles.
+
+In the terraform.tfvars file provide the following:
+iam_instance_profile_name  = "ec2_instance_role"
+automation_assume_role_arn = "arn:aws:iam::111111111111:role/SSMAutomation" (this role gets created from the 1st step)
+trigger_instance_refresh   = "true"
+
+
+(at some point I may combine this into one deployment)
+
