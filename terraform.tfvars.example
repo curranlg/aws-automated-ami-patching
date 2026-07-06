@@ -1,0 +1,29 @@
+# Copy to terraform.tfvars and fill in your values.
+# terraform.tfvars is gitignored — do not commit it.
+
+aws_region = "eu-west-2"
+
+# The ONE piece of instance-profile info you now need to supply.
+# This must be the *name* of the instance profile attached to your ASG instances
+# (and reused for the temporary AMI-builder instance).
+ec2_instance_profile_name = "ec2_instance_role"
+
+# Whether the runbook should kick off an ASG Instance Refresh after building the AMI.
+trigger_instance_refresh = "true"
+
+# Networking for the temporary AMI-builder instance is auto-detected per ASG
+# by the Lambda (from wherever that ASG's instances are actually running).
+# Only set these if you need to override that for a specific reason:
+# subnet_id          = "subnet-0123456789abcdef0"
+# security_group_ids = ["sg-0123456789abcdef0"]
+
+# Optional overrides (defaults shown):
+# automation_role_name             = "SSMAutomation"
+# eventbridge_scheduler_role_name  = "Eventbridge-to-SSM-Automation-Role"
+# lambda_name                      = "ASG-AMIUpdate-Scheduler"
+# instance_type                    = "t3.medium"
+# subnet_id                        = ""
+# schedule_hour_utc                = 3
+# schedule_timezone                = ""
+# lambda_scheduled_trigger_enabled = true
+# lambda_trigger_schedule_expression = "cron(0 1 * * ? *)"
