@@ -34,21 +34,97 @@ EventBridge ensures the process runs automatically whenever new ASGs are created
 
 •	ASG replaces instances safely and gradually, ensuring at least the defined number of healthy nodes remain available throughout the refresh process.
 
-# Deployment
 
-The solution is currently split into two parts.  
+# Automated AMI Patching — combined module
 
-<b>1st</b>, run the 'custom_update_ami' code to deploy the custom SSM automation runbooks, one for Windows and one for Linux plus the SSMAutomation IAM role.
+This folder merges the previous two-step deployment (`custom_update_ami` +
+`lambda_ssmautomation`) into a single Terraform configuration/module.
 
-In the terraform.tfvars file you must provide the arn of the ec2 instance profile role i.e. instance_profile_role_arn = "arn:aws:iam::111111111111:role/ec2_instance_role"
+## What changed
 
-<b>2nd</b>, run the 'lambda_ssmautomation' code to deploy the lambda function and associated IAM roles.
+- **One `terraform apply` instead of two.** All resources live in one root
+  module (`main.tf`, `variables.tf`, `outputs.tf`), with `runbooks/` and
+  `lambda/` copied in as-is.
+- **Automatic wiring between the two halves.** Previously you had to copy the
+  SSM automation role ARN and the two runbook document names out of one
+  stack's outputs and paste them into the other stack's `terraform.tfvars`.
+  Now those are direct Terraform references
+  (`aws_iam_role.ssm_automation_role.arn`,
+  `aws_ssm_document.update_windows_ami_with_lt.name`, etc.), so they can never
+  drift out of sync.
+- **One instance-profile input instead of two.** You used to supply
+  `instance_profile_role_arn` to the first stack and
+  `iam_instance_profile_name` to the second — two different ways of
+  describing the same instance profile. Now you supply just
+  `ec2_instance_profile_name`, and the role ARN is looked up automatically
+  with a `data "aws_iam_instance_profile"` source.
+- Resource **names/types are unchanged** from the originals — this matters
+  for migrating existing state (see below).
 
-In the terraform.tfvars file provide the following:<br>
-iam_instance_profile_name  = "ec2_instance_role"<br>
-automation_assume_role_arn = "arn:aws:iam::111111111111:role/SSMAutomation" (this role gets created from the 1st step)<br>
-trigger_instance_refresh   = "true"<br>
+## Fresh deployment (no existing resources)
+
+bash
+cp terraform.tfvars.example terraform.tfvars
+# edit terraform.tfvars — at minimum set ec2_instance_profile_name
+
+terraform init
+terraform plan
+terraform apply
 
 
-(at some point I may combine this into one deployment)
+## Migrating from the previous two-state deployment into this combined module
+
+Because every resource keeps its original Terraform address
+(`aws_iam_role.ssm_automation_role`, `aws_lambda_function.asg_ami_scheduler`,
+etc.), you don't need to destroy/recreate anything in AWS — you just need to
+move the state entries into one state file.
+
+1. Put this combined config somewhere new, and `terraform init` it (with
+   whatever backend you want the merged state to live in).
+
+2. Pull each resource address out of your two existing states into the new
+   one. If your old states are local files:
+
+   ```bash
+   # from custom_update_ami's old state
+   for addr in $(terraform state list -state=/path/to/custom_update_ami/terraform.tfstate); do
+     terraform state mv -state=/path/to/custom_update_ami/terraform.tfstate \
+       -state-out=terraform.tfstate "$addr" "$addr"
+   done
+
+   # from lambda_ssmautomation's old state
+   for addr in $(terraform state list -state=/path/to/lambda_ssmautomation/terraform.tfstate); do
+     terraform state mv -state=/path/to/lambda_ssmautomation/terraform.tfstate \
+       -state-out=terraform.tfstate "$addr" "$addr"
+   done
+   ```
+
+   If you're using a remote backend (S3, etc.) instead of local files, run the
+   same `terraform state mv` commands from within each old directory,
+   targeting the new backend with `-state-out`, or use `terraform state pull` /
+   `push` to stitch the JSON together — same idea either way.
+
+3. `terraform plan` in the combined directory. Because the resource addresses
+   line up, this should come back with **no changes** — that's your
+   confirmation the migration was clean. Two things it will legitimately want
+   to change, since they were previously separate variables re-typed by hand:
+   - the `iam:PassRole` resource on `automation_permissions` (now points at
+     the instance profile's role ARN via a data source instead of a raw
+     var — same value, should be a no-op if you passed matching values
+     before)
+   - nothing else, if your old `terraform.tfvars` values matched between the
+     two stacks as the README always assumed they would
+
+4. Once `plan` is clean, delete the two old working directories/state files
+   and use this one going forward.
+
+## Files
+
+| File | Purpose |
+|---|---|
+| `main.tf` | All resources: SSM automation role + documents, Lambda + IAM roles, EventBridge rules |
+| `variables.tf` | Inputs (see `terraform.tfvars.example`) |
+| `outputs.tf` | Role ARNs / names other stacks might reference |
+| `runbooks/*.json` | SSM Automation runbook documents (Windows/Linux) |
+| `lambda/auto_schedule_ssm.py` | Lambda source, packaged automatically via the `archive` provider |
 
