@@ -30,7 +30,7 @@ EventBridge ensures the process runs automatically whenever new ASGs are created
 
 •	SSM Automation runbook launches a temporary builder instance, patches it, creates a new AMI, tags the AMI, and updates the ASG’s Launch Template with the new AMI.
 
-•	Automation then triggers an Auto Scaling Instance Refresh using the "Rolling" strategy and availability focused preferences (MinHealthyPercentage, warmup, etc.) to ensure zero downtime rollout.
+•	(optionally) SSM Automation then triggers an Auto Scaling Instance Refresh using the "Rolling" strategy and availability focused preferences (MinHealthyPercentage, warmup, etc.) to ensure zero downtime rollout.
 
 •	ASG replaces instances safely and gradually, ensuring at least the defined number of healthy nodes remain available throughout the refresh process.
 
