@@ -10,6 +10,7 @@ terraform {
 
 provider "aws" {
   region = "eu-west-2"
+  profile = "aws2025-liam"
 }
 
 data "aws_caller_identity" "current" {}
